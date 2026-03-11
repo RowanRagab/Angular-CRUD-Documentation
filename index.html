@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Angular CRUD — Documentation Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #dd0031;
+    --red-dim: #a80024;
+    --dark: #0f0f14;
+    --panel: #16161f;
+    --card: #1e1e2a;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --muted: #7070a0;
+    --accent: #7c4dff;
+    --green: #00e676;
+    --yellow: #ffd740;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Cairo', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── GRID NOISE BACKGROUND ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(221,0,49,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(221,0,49,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15,15,20,.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    height: 64px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-weight: 900;
+    font-size: 1.1rem;
+    letter-spacing: -.02em;
+    flex-shrink: 0;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--red);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: grid; place-items: center;
+    font-size: .65rem; font-weight: 700; color: white;
+    font-family: var(--mono);
+  }
+
+  /* ─── SEARCH ─── */
+  .search-wrap {
+    flex: 1;
+    max-width: 520px;
+    position: relative;
+  }
+  .search-wrap input {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .55rem 1rem .55rem 2.8rem;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: .9rem;
+    outline: none;
+    transition: border .2s, box-shadow .2s;
+  }
+  .search-wrap input:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(221,0,49,.15);
+  }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .search-icon {
+    position: absolute;
+    left: .9rem; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: .9rem;
+    pointer-events: none;
+  }
+  .result-count {
+    font-size: .75rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .result-count span { color: var(--red); }
+
+  /* ─── LAYOUT ─── */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: calc(100vh - 64px);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── SIDEBAR ─── */
+  aside {
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 64px;
+    height: calc(100vh - 64px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .sidebar-label {
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    color: var(--muted);
+    padding: 0 1.25rem;
+    margin-bottom: .75rem;
+    text-transform: uppercase;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem 1.25rem;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    border-right: 2px solid transparent;
+    position: relative;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.04); }
+  .nav-item.active {
+    background: rgba(221,0,49,.1);
+    border-right-color: var(--red);
+    color: white;
+  }
+  .nav-num {
+    font-family: var(--mono);
+    font-size: .65rem;
+    color: var(--red);
+    background: rgba(221,0,49,.15);
+    border-radius: 4px;
+    padding: .1rem .35rem;
+    flex-shrink: 0;
+    min-width: 28px;
+    text-align: center;
+  }
+  .nav-text {
+    font-size: .82rem;
+    color: var(--muted);
+    transition: color .15s;
+    line-height: 1.3;
+  }
+  .nav-item.active .nav-text,
+  .nav-item:hover .nav-text { color: var(--text); }
+  .nav-item.hidden { display: none; }
+
+  /* ─── MAIN CONTENT ─── */
+  main {
+    padding: 2.5rem 3rem;
+    max-width: 900px;
+  }
+
+  /* ─── SECTION ─── */
+  .section { display: none; animation: fadeIn .3s ease; }
+  .section.visible { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ─── SECTION HEADER ─── */
+  .sec-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 3rem;
+    font-weight: 600;
+    color: var(--red);
+    opacity: .4;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .sec-title { font-size: 1.6rem; font-weight: 900; line-height: 1.2; }
+  .sec-sub { font-size: .85rem; color: var(--muted); margin-top: .3rem; }
+
+  /* ─── H2, H3 ─── */
+  .doc-h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: white;
+    margin: 2rem 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .doc-h2::before {
+    content: '';
+    display: block;
+    width: 4px; height: 1.15rem;
+    background: var(--red);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .doc-h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #9b8dff;
+    margin: 1.5rem 0 .75rem;
+  }
+
+  /* ─── PARAGRAPH ─── */
+  .doc-p {
+    font-size: .9rem;
+    color: #b0b0c8;
+    line-height: 1.8;
+    margin-bottom: .75rem;
+  }
+
+  /* ─── CODE BLOCK ─── */
+  .code-block {
+    background: #0a0a10;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 1rem 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255,255,255,.04);
+    border-bottom: 1px solid var(--border);
+    padding: .5rem 1rem;
+  }
+  .code-lang {
+    font-family: var(--mono);
+    font-size: .7rem;
+    color: var(--red);
+    font-weight: 600;
+    letter-spacing: .08em;
+  }
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: .65rem;
+    padding: .2rem .5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .copy-btn:hover { border-color: var(--red); color: var(--red); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+  pre {
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: .8rem;
+    line-height: 1.7;
+    color: #c8d0e8;
+  }
+  .kw { color: #c792ea; }
+  .fn { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cm { color: #546e7a; font-style: italic; }
+  .dec { color: var(--red); }
+  .typ { color: #ffcb6b; }
+  .num { color: #f78c6c; }
+
+  /* ─── TABLE ─── */
+  .doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: .85rem;
+  }
+  .doc-table th {
+    background: rgba(221,0,49,.15);
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .06em;
+    padding: .6rem 1rem;
+    text-align: right;
+    border: 1px solid var(--border);
+  }
+  .doc-table td {
+    padding: .6rem 1rem;
+    border: 1px solid var(--border);
+    color: #b0b0c8;
+    vertical-align: top;
+  }
+  .doc-table tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+  /* ─── NOTE BOX ─── */
+  .note-box {
+    background: rgba(124,77,255,.08);
+    border: 1px solid rgba(124,77,255,.3);
+    border-right: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: .9rem 1.2rem;
+    font-size: .85rem;
+    color: #b0b0d8;
+    margin: 1rem 0;
+    line-height: 1.7;
+  }
+  .note-box.success {
+    background: rgba(0,230,118,.06);
+    border-color: rgba(0,230,118,.3);
+    border-right-color: var(--green);
+    color: #a0d8b0;
+  }
+  .note-box.warning {
+    background: rgba(255,215,64,.06);
+    border-color: rgba(255,215,64,.3);
+    border-right-color: var(--yellow);
+    color: #d8c880;
+  }
+
+  /* ─── BULLET ─── */
+  .bullet-list { list-style: none; margin: .75rem 0; }
+  .bullet-list li {
+    display: flex; gap: .6rem;
+    font-size: .87rem; color: #b0b0c8;
+    padding: .3rem 0; line-height: 1.6;
+  }
+  .bullet-list li::before {
+    content: '▸';
+    color: var(--red);
+    flex-shrink: 0;
+    margin-top: .05rem;
+  }
+
+  /* ─── SEARCH HIGHLIGHT ─── */
+  mark {
+    background: rgba(221,0,49,.35);
+    color: white;
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  /* ─── SEARCH RESULTS VIEW ─── */
+  #search-results { display: none; }
+  #search-results.visible { display: block; }
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 3px; height: 100%;
+    background: var(--red);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .result-card:hover { border-color: var(--red); transform: translateX(-2px); }
+  .result-card:hover::before { opacity: 1; }
+  .result-section { font-family: var(--mono); font-size: .7rem; color: var(--red); margin-bottom: .3rem; }
+  .result-title { font-size: .95rem; font-weight: 700; color: white; margin-bottom: .4rem; }
+  .result-snippet { font-size: .82rem; color: var(--muted); line-height: 1.6; }
+
+  .no-results {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted);
+  }
+  .no-results .big { font-size: 3rem; margin-bottom: 1rem; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; }
+    main { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">ng</div>
+    <span>Angular Docs</span>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="ابحث عن أي موضوع... مثلاً: routing, service, model" autocomplete="off" />
+  </div>
+  <div class="result-count" id="resultCount"></div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="sidebar-label">المحتويات</div>
+    <div id="navList"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+    <!-- Search results -->
+    <div id="search-results">
+      <div class="sec-header">
+        <div class="sec-title">نتائج البحث</div>
+      </div>
+      <div id="results-container"></div>
+    </div>
+
+    <!-- Sections rendered by JS -->
+    <div id="sections-container"></div>
+  </main>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// DATA — كل محتوى الـ documentation
+// ══════════════════════════════════════════════════════════════
+const SECTIONS = [
+  {
+    id: "prereqs",
+    num: "01",
+    title: "Prerequisites & Environment Setup",
+    sub: "كل حاجة محتاجة تثبتها قبل ما تبدأ",
+    tags: ["node", "npm", "cli", "install", "setup", "بيئة", "تثبيت", "متطلبات"],
+    content: `
+      <div class="doc-h2">المتطلبات الأساسية</div>
+      <p class="doc-p">قبل ما تبدأ أي Angular project، لازم تتأكد إن الأدوات دي موجودة على جهازك:</p>
+      <table class="doc-table">
+        <thead><tr><th>الأداة</th><th>الإصدار المطلوب</th><th>الغرض</th></tr></thead>
+        <tbody>
+          <tr><td>Node.js</td><td>v18.x أو أحدث</td><td>بيشغّل Angular CLI و npm</td></tr>
+          <tr><td>npm</td><td>v9.x أو أحدث</td><td>إدارة الـ packages</td></tr>
+          <tr><td>Angular CLI</td><td>v17+</td><td>إنشاء وإدارة المشاريع</td></tr>
+          <tr><td>VS Code</td><td>أي إصدار حديث</td><td>محرر الكود الموصى به</td></tr>
+        </tbody>
+      </table>
+
+      <div class="doc-h2">التحقق من الإصدارات</div>
+      <p class="doc-p">افتح terminal وشغّل الأوامر دي:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm"># التحقق من Node.js</span>
+node <span class="kw">--version</span>
+
+<span class="cm"># التحقق من npm</span>
+npm <span class="kw">--version</span>
+
+<span class="cm"># التحقق من Angular CLI</span>
+ng version</pre>
+      </div>
+
+      <div class="doc-h2">تثبيت Angular CLI</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm"># تثبيت Angular CLI بشكل global</span>
+npm install <span class="kw">-g</span> @angular/cli
+
+<span class="cm"># التحقق من التثبيت</span>
+ng version</pre>
+      </div>
+      <div class="note-box">💡 VS Code Extensions المفيدة: <strong>Angular Language Service</strong>، <strong>ESLint</strong>، <strong>Prettier</strong>، <strong>Material Icon Theme</strong></div>
+    `
+  },
+  {
+    id: "cli",
+    num: "02",
+    title: "Creating the Angular Project (CLI)",
+    sub: "إنشاء المشروع من الصفر باستخدام Angular CLI",
+    tags: ["ng new", "create", "project", "cli", "serve", "إنشاء", "مشروع", "تشغيل"],
+    content: `
+      <div class="doc-h2">إنشاء المشروع</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm"># إنشاء مشروع جديد</span>
+ng new my-crud-app
+
+<span class="cm"># الأسئلة اللي هتظهر:</span>
+<span class="cm"># ? Which stylesheet format?  ► CSS</span>
+<span class="cm"># ? Enable SSR?  ► No</span>
+
+<span class="cm"># الدخول لمجلد المشروع</span>
+cd my-crud-app</pre>
+      </div>
+
+      <div class="doc-h2">خيارات إضافية مفيدة</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm"># مشروع بدون tests</span>
+ng new my-crud-app <span class="kw">--skip-tests</span>
+
+<span class="cm"># مع standalone components</span>
+ng new my-crud-app <span class="kw">--standalone</span>
+
+<span class="cm"># مع routing جاهز</span>
+ng new my-crud-app <span class="kw">--routing</span></pre>
+      </div>
+
+      <div class="doc-h2">تشغيل المشروع</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm"># تشغيل development server</span>
+ng serve
+
+<span class="cm"># مع فتح المتصفح تلقائياً</span>
+ng serve <span class="kw">--open</span>
+
+<span class="cm"># المشروع يفتح على: http://localhost:4200</span></pre>
+      </div>
+      <div class="note-box success">✅ لو شفت شاشة Angular الافتراضية على localhost:4200 — كل حاجة تمام وجاهز تكمّل!</div>
+    `
+  },
+  {
+    id: "structure",
+    num: "03",
+    title: "Project Structure & Architecture",
+    sub: "هيكل المشروع وتنظيمه",
+    tags: ["structure", "folder", "هيكل", "مجلدات", "architecture", "components", "services", "models", "shared"],
+    content: `
+      <div class="doc-h2">هيكل المجلدات</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TREE</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre>my-crud-app/
+├── src/
+│   ├── app/
+│   │   ├── <span class="fn">components/</span>          <span class="cm">← مكونات الـ UI</span>
+│   │   │   ├── item-list/       <span class="cm">← عرض القائمة (Read)</span>
+│   │   │   ├── item-create/     <span class="cm">← إنشاء عنصر (Create)</span>
+│   │   │   └── item-edit/       <span class="cm">← تعديل عنصر (Update)</span>
+│   │   ├── <span class="fn">services/</span>            <span class="cm">← منطق الأعمال والـ HTTP</span>
+│   │   │   └── item.service.ts
+│   │   ├── <span class="fn">models/</span>              <span class="cm">← تعريف أنواع البيانات</span>
+│   │   │   └── item.model.ts
+│   │   ├── <span class="fn">shared/</span>              <span class="cm">← مكونات مشتركة</span>
+│   │   │   ├── navbar/
+│   │   │   └── loading-spinner/
+│   │   ├── app.component.ts
+│   │   └── <span class="dec">app.routes.ts</span>        <span class="cm">← تعريف الـ routes</span>
+│   ├── assets/
+│   └── styles.css
+├── angular.json
+└── package.json</pre>
+      </div>
+
+      <div class="doc-h2">إنشاء هيكل المجلدات</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm"># إنشاء components</span>
+ng g c components/item-list
+ng g c components/item-create
+ng g c components/item-edit
+
+<span class="cm"># إنشاء service</span>
+ng g service services/item
+
+<span class="cm"># إنشاء shared components</span>
+ng g c shared/navbar
+ng g c shared/loading-spinner</pre>
+      </div>
+    `
+  },
+  {
+    id: "models",
+    num: "04",
+    title: "Models — Defining Data Interfaces",
+    sub: "تعريف أنواع البيانات باستخدام TypeScript Interfaces",
+    tags: ["model", "interface", "typescript", "type", "dto", "نموذج", "بيانات", "أنواع"],
+    content: `
+      <div class="doc-h2">ما هو الـ Model؟</div>
+      <p class="doc-p">الـ Model هو TypeScript Interface بيحدد شكل البيانات اللي هتتعامل معاها.</p>
+      <ul class="bullet-list">
+        <li>Type Safety — ضمان صحة أنواع البيانات</li>
+        <li>Auto-complete في VS Code</li>
+        <li>اكتشاف الأخطاء في وقت الكتابة مش وقت التشغيل</li>
+      </ul>
+
+      <div class="doc-h2">إنشاء Item Model</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm">// src/app/models/item.model.ts</span>
+
+<span class="kw">export interface</span> <span class="typ">Item</span> {
+  id: <span class="typ">number</span>;
+  title: <span class="typ">string</span>;
+  description: <span class="typ">string</span>;
+  status: <span class="str">'active'</span> | <span class="str">'inactive'</span>;
+  createdAt: <span class="typ">string</span>;
+}
+
+<span class="cm">// Interface لإنشاء item جديد (بدون id)</span>
+<span class="kw">export interface</span> <span class="typ">CreateItemDto</span> {
+  title: <span class="typ">string</span>;
+  description: <span class="typ">string</span>;
+  status: <span class="str">'active'</span> | <span class="str">'inactive'</span>;
+}
+
+<span class="cm">// Interface لتحديث item</span>
+<span class="kw">export interface</span> <span class="typ">UpdateItemDto</span> <span class="kw">extends</span> Partial&lt;<span class="typ">CreateItemDto</span>&gt; {}</pre>
+      </div>
+    `
+  },
+  {
+    id: "services",
+    num: "05",
+    title: "Services — HTTP & Business Logic",
+    sub: "كيف نتعامل مع الـ API باستخدام Angular Services",
+    tags: ["service", "http", "httpclient", "observable", "api", "injectable", "سيرفس", "اتش تي تي بي"],
+    content: `
+      <div class="doc-h2">تفعيل HttpClient</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm">// src/app/app.config.ts</span>
+<span class="kw">import</span> { ApplicationConfig } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { provideRouter } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+<span class="kw">import</span> { <span class="fn">provideHttpClient</span> } <span class="kw">from</span> <span class="str">'@angular/common/http'</span>;
+<span class="kw">import</span> { routes } <span class="kw">from</span> <span class="str">'./app.routes'</span>;
+
+<span class="kw">export const</span> appConfig: <span class="typ">ApplicationConfig</span> = {
+  providers: [
+    <span class="fn">provideRouter</span>(routes),
+    <span class="fn">provideHttpClient</span>(),   <span class="cm">// ← مهم جداً</span>
+  ]
+};</pre>
+      </div>
+
+      <div class="doc-h2">Item Service الكامل</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="dec">@Injectable</span>({ providedIn: <span class="str">'root'</span> })
+<span class="kw">export class</span> <span class="typ">ItemService</span> {
+  <span class="kw">private</span> apiUrl = <span class="str">'https://jsonplaceholder.typicode.com/todos'</span>;
+
+  <span class="kw">constructor</span>(<span class="kw">private</span> http: <span class="typ">HttpClient</span>) {}
+
+  <span class="cm">// READ: جلب كل العناصر</span>
+  <span class="fn">getAll</span>(): <span class="typ">Observable</span>&lt;<span class="typ">Item</span>[]&gt; {
+    <span class="kw">return this</span>.http.<span class="fn">get</span>&lt;<span class="typ">Item</span>[]&gt;(<span class="kw">this</span>.apiUrl);
+  }
+
+  <span class="cm">// READ: جلب عنصر واحد</span>
+  <span class="fn">getById</span>(id: <span class="typ">number</span>): <span class="typ">Observable</span>&lt;<span class="typ">Item</span>&gt; {
+    <span class="kw">return this</span>.http.<span class="fn">get</span>&lt;<span class="typ">Item</span>&gt;(<span class="str">\`\${this.apiUrl}/\${id}\`</span>);
+  }
+
+  <span class="cm">// CREATE</span>
+  <span class="fn">create</span>(item: <span class="typ">CreateItemDto</span>): <span class="typ">Observable</span>&lt;<span class="typ">Item</span>&gt; {
+    <span class="kw">return this</span>.http.<span class="fn">post</span>&lt;<span class="typ">Item</span>&gt;(<span class="kw">this</span>.apiUrl, item);
+  }
+
+  <span class="cm">// UPDATE</span>
+  <span class="fn">update</span>(id: <span class="typ">number</span>, item: <span class="typ">UpdateItemDto</span>): <span class="typ">Observable</span>&lt;<span class="typ">Item</span>&gt; {
+    <span class="kw">return this</span>.http.<span class="fn">put</span>&lt;<span class="typ">Item</span>&gt;(<span class="str">\`\${this.apiUrl}/\${id}\`</span>, item);
+  }
+
+  <span class="cm">// DELETE</span>
+  <span class="fn">delete</span>(id: <span class="typ">number</span>): <span class="typ">Observable</span>&lt;<span class="typ">void</span>&gt; {
+    <span class="kw">return this</span>.http.<span class="fn">delete</span>&lt;<span class="typ">void</span>&gt;(<span class="str">\`\${this.apiUrl}/\${id}\`</span>);
+  }
+}</pre>
+      </div>
+      <div class="note-box">💡 <strong>jsonplaceholder.typicode.com</strong> هو free fake REST API مناسب جداً للـ demos. في الـ production بتستبدله بـ API حقيقي.</div>
+    `
+  },
+  {
+    id: "routing",
+    num: "06",
+    title: "Routing — app.routes.ts",
+    sub: "تعريف مسارات التنقل في التطبيق",
+    tags: ["routing", "routes", "router", "navigate", "path", "url", "راوتنج", "تنقل", "مسارات", "lazyload", "lazy", "loadcomponent", "loadchildren", "لازي لود"],
+    content: `
+      <div class="doc-h2">Eager Loading — الطريقة العادية</div>
+      <p class="doc-p">في الـ Eager Loading كل الـ components بتتحمل مرة واحدة وقت ما التطبيق يشتغل — حتى لو المستخدم مفتحش الصفحة دي. ده بيبطّئ الـ initial load.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — Eager (عادي)</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { Routes } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+<span class="cm">// ❌ كل الـ components بتتحمل فوراً حتى لو مش محتاجاهم</span>
+<span class="kw">import</span> { <span class="typ">ItemListComponent</span> } <span class="kw">from</span> <span class="str">'./components/item-list/item-list.component'</span>;
+<span class="kw">import</span> { <span class="typ">ItemCreateComponent</span> } <span class="kw">from</span> <span class="str">'./components/item-create/item-create.component'</span>;
+<span class="kw">import</span> { <span class="typ">ItemEditComponent</span> } <span class="kw">from</span> <span class="str">'./components/item-edit/item-edit.component'</span>;
+
+<span class="kw">export const</span> routes: <span class="typ">Routes</span> = [
+  { path: <span class="str">'items'</span>, component: <span class="typ">ItemListComponent</span> },
+  { path: <span class="str">'items/create'</span>, component: <span class="typ">ItemCreateComponent</span> },
+  { path: <span class="str">'items/edit/:id'</span>, component: <span class="typ">ItemEditComponent</span> },
+];</pre>
+      </div>
+
+      <div class="doc-h2">Lazy Loading — loadComponent</div>
+      <p class="doc-p">مع الـ Lazy Loading، كل component بيتحمل بس لما المستخدم يفتح الـ route بتاعته. ده بيقلل حجم الـ initial bundle بشكل كبير.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — Lazy loadComponent ✅</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { Routes } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+<span class="cm">// ✅ مفيش imports فوق — كل component بيتحمل عند الطلب فقط</span>
+
+<span class="kw">export const</span> routes: <span class="typ">Routes</span> = [
+  {
+    path: <span class="str">''</span>,
+    redirectTo: <span class="str">'/items'</span>,
+    pathMatch: <span class="str">'full'</span>
+  },
+  {
+    path: <span class="str">'items'</span>,
+    <span class="fn">loadComponent</span>: () =>
+      <span class="kw">import</span>(<span class="str">'./components/item-list/item-list.component'</span>)
+        .then(m => m.<span class="typ">ItemListComponent</span>)
+  },
+  {
+    path: <span class="str">'items/create'</span>,
+    <span class="fn">loadComponent</span>: () =>
+      <span class="kw">import</span>(<span class="str">'./components/item-create/item-create.component'</span>)
+        .then(m => m.<span class="typ">ItemCreateComponent</span>)
+  },
+  {
+    path: <span class="str">'items/edit/:id'</span>,
+    <span class="fn">loadComponent</span>: () =>
+      <span class="kw">import</span>(<span class="str">'./components/item-edit/item-edit.component'</span>)
+        .then(m => m.<span class="typ">ItemEditComponent</span>)
+  },
+  { path: <span class="str">'**'</span>, redirectTo: <span class="str">'/items'</span> }
+];</pre>
+      </div>
+      <div class="note-box">💡 <strong>loadComponent</strong> متاحة من Angular 14+ مع الـ Standalone Components. كل component بيتحمل في chunk منفصل في الـ build.</div>
+
+      <div class="doc-h2">Lazy Loading — loadChildren (Feature Module)</div>
+      <p class="doc-p">لو عندك feature كبيرة فيها routes متعددة، بتجمعهم في ملف routes منفصل وتستخدم <strong>loadChildren</strong>:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — loadChildren للـ features</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm">// app.routes.ts — الـ Root Routes</span>
+<span class="kw">export const</span> routes: <span class="typ">Routes</span> = [
+  {
+    path: <span class="str">'items'</span>,
+    <span class="fn">loadChildren</span>: () =>
+      <span class="kw">import</span>(<span class="str">'./features/items/items.routes'</span>)
+        .then(m => m.<span class="typ">ITEMS_ROUTES</span>)
+  },
+  {
+    path: <span class="str">'dashboard'</span>,
+    <span class="fn">loadChildren</span>: () =>
+      <span class="kw">import</span>(<span class="str">'./features/dashboard/dashboard.routes'</span>)
+        .then(m => m.<span class="typ">DASHBOARD_ROUTES</span>)
+  },
+];
+
+<span class="cm">// features/items/items.routes.ts — الـ Child Routes</span>
+<span class="kw">export const</span> <span class="typ">ITEMS_ROUTES</span>: <span class="typ">Routes</span> = [
+  { path: <span class="str">''</span>, <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./item-list.component'</span>).then(m => m.<span class="typ">ItemListComponent</span>) },
+  { path: <span class="str">'create'</span>, <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./item-create.component'</span>).then(m => m.<span class="typ">ItemCreateComponent</span>) },
+  { path: <span class="str">'edit/:id'</span>, <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./item-edit.component'</span>).then(m => m.<span class="typ">ItemEditComponent</span>) },
+];</pre>
+      </div>
+
+      <div class="doc-h2">Preloading Strategy — تحميل ذكي في الخلفية</div>
+      <p class="doc-p">بدل ما تستنى المستخدم يفتح الـ route، ممكن تخلي Angular تحمّل الـ lazy chunks في الخلفية بعد ما الـ app يقوم:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — app.config.ts</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { PreloadAllModules, provideRouter, withPreloading } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+
+<span class="kw">export const</span> appConfig: <span class="typ">ApplicationConfig</span> = {
+  providers: [
+    <span class="fn">provideRouter</span>(
+      routes,
+      <span class="fn">withPreloading</span>(<span class="typ">PreloadAllModules</span>)  <span class="cm">// ← يحمّل كل الـ chunks في الخلفية</span>
+    ),
+    <span class="fn">provideHttpClient</span>(<span class="fn">withInterceptors</span>([...]))
+  ]
+};</pre>
+      </div>
+
+      <div class="doc-h2">مقارنة الطرق الثلاثة</div>
+      <table class="doc-table">
+        <thead><tr><th>الطريقة</th><th>متى تستخدمها</th><th>الفائدة</th></tr></thead>
+        <tbody>
+          <tr><td>Eager Loading</td><td>صفحات صغيرة / عدد routes قليل</td><td>أبسط كود — كل حاجة جاهزة فوراً</td></tr>
+          <tr><td>loadComponent</td><td>Standalone components منفصلة</td><td>كل component = chunk منفصل</td></tr>
+          <tr><td>loadChildren</td><td>Features كبيرة بـ routes متعددة</td><td>تجميع الـ feature في bundle واحد</td></tr>
+          <tr><td>PreloadAllModules</td><td>مع loadChildren في الـ production</td><td>أفضل UX — lazy + preload معاً</td></tr>
+        </tbody>
+      </table>
+      <div class="note-box warning">⚠️ <strong>شرط مهم:</strong> الـ Lazy Loading بيشتغل بس مع <strong>Standalone Components</strong> (اللي عندها <code>standalone: true</code>). لو بتستخدم NgModules القديمة، بتستخدم <strong>loadChildren</strong> مع module path بدل component path.</div>
+
+      <div class="doc-h2">ربط الـ Router في App Component</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="dec">@Component</span>({
+  selector: <span class="str">'app-root'</span>,
+  standalone: <span class="kw">true</span>,
+  imports: [<span class="typ">RouterOutlet</span>, <span class="typ">NavbarComponent</span>],
+  template: <span class="str">\`
+    &lt;app-navbar /&gt;
+    &lt;main class='container'&gt;
+      &lt;router-outlet /&gt;
+    &lt;/main&gt;
+  \`</span>
+})
+<span class="kw">export class</span> <span class="typ">AppComponent</span> {}</pre>
+      </div>
+    `
+  },
+  {
+    id: "guards",
+    num: "06.5",
+    title: "Route Guards",
+    sub: "حماية الـ Routes وتقييد الوصول",
+    tags: ["guard", "canactivate", "candeactivate", "canmatch", "auth", "protect", "حماية", "صلاحيات", "جارد"],
+    content: `
+      <div class="doc-h2">ما هو الـ Guard؟</div>
+      <p class="doc-p">الـ Route Guard هو function بتشتغل قبل ما Angular تنقل المستخدم للـ route — وبتقرر: هيكمل ولا هيتحول لصفحة تانية. أشهر استخدام هو منع الـ users الغير مسجّلين من الوصول لصفحات معينة.</p>
+      <ul class="bullet-list">
+        <li><strong>canActivate</strong> — هل يقدر يفتح الـ route ده؟</li>
+        <li><strong>canDeactivate</strong> — هل يقدر يسيب الـ route ده؟ (مفيد لـ unsaved changes)</li>
+        <li><strong>canMatch</strong> — هل الـ route ده ينطبق أصلاً على الـ URL؟</li>
+        <li><strong>resolve</strong> — جلب بيانات قبل فتح الصفحة</li>
+      </ul>
+
+      <div class="doc-h2">إنشاء Auth Guard</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm"># إنشاء guard باستخدام CLI</span>
+ng generate guard guards/auth
+
+<span class="cm"># هينشئ الملف:</span>
+<span class="cm"># src/app/guards/auth.guard.ts</span></pre>
+      </div>
+
+      <div class="doc-h2">canActivate — منع الدخول بدون Login</div>
+      <p class="doc-p">أشهر guard — بيشيك لو المستخدم مسجّل دخول ولا لأ:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — auth.guard.ts</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { <span class="typ">CanActivateFn</span> } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+<span class="kw">import</span> { <span class="fn">inject</span> } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { Router } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+
+<span class="kw">export const</span> <span class="fn">authGuard</span>: <span class="typ">CanActivateFn</span> = (route, state) => {
+  <span class="kw">const</span> router = <span class="fn">inject</span>(<span class="typ">Router</span>);
+  <span class="kw">const</span> token = localStorage.<span class="fn">getItem</span>(<span class="str">'auth_token'</span>);
+
+  <span class="kw">if</span> (token) {
+    <span class="kw">return true</span>;   <span class="cm">// ✅ مسجّل — اسمحله يدخل</span>
+  }
+
+  <span class="cm">// ❌ مش مسجّل — روّحه على Login وحفظ الـ URL المطلوب</span>
+  <span class="kw">return</span> router.<span class="fn">createUrlTree</span>(
+    [<span class="str">'/login'</span>],
+    { queryParams: { returnUrl: state.url } }
+  );
+};</pre>
+      </div>
+
+      <div class="doc-h2">canActivate مع Service — الطريقة الأقوى</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — auth.guard.ts (مع AuthService)</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { <span class="typ">CanActivateFn</span> } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+<span class="kw">import</span> { <span class="fn">inject</span> } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { <span class="typ">AuthService</span> } <span class="kw">from</span> <span class="str">'../services/auth.service'</span>;
+<span class="kw">import</span> { Router } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+
+<span class="kw">export const</span> <span class="fn">authGuard</span>: <span class="typ">CanActivateFn</span> = () => {
+  <span class="kw">const</span> auth   = <span class="fn">inject</span>(<span class="typ">AuthService</span>);
+  <span class="kw">const</span> router = <span class="fn">inject</span>(<span class="typ">Router</span>);
+
+  <span class="kw">if</span> (auth.<span class="fn">isLoggedIn</span>()) <span class="kw">return true</span>;
+
+  <span class="kw">return</span> router.<span class="fn">createUrlTree</span>([<span class="str">'/login'</span>]);
+};
+
+<span class="cm">// ─── Role Guard — للصلاحيات ──────────────────────────</span>
+<span class="kw">export const</span> <span class="fn">adminGuard</span>: <span class="typ">CanActivateFn</span> = () => {
+  <span class="kw">const</span> auth   = <span class="fn">inject</span>(<span class="typ">AuthService</span>);
+  <span class="kw">const</span> router = <span class="fn">inject</span>(<span class="typ">Router</span>);
+
+  <span class="kw">if</span> (auth.<span class="fn">hasRole</span>(<span class="str">'admin'</span>)) <span class="kw">return true</span>;
+
+  <span class="kw">return</span> router.<span class="fn">createUrlTree</span>([<span class="str">'/forbidden'</span>]);
+};</pre>
+      </div>
+
+      <div class="doc-h2">canDeactivate — تحذير عند مغادرة الصفحة</div>
+      <p class="doc-p">مفيد جداً لو المستخدم عنده تغييرات غير محفوظة في فورم:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — unsaved-changes.guard.ts</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { <span class="typ">CanDeactivateFn</span> } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+
+<span class="cm">// Interface تتطبقها الـ components اللي عايزة الحماية</span>
+<span class="kw">export interface</span> <span class="typ">CanComponentDeactivate</span> {
+  <span class="fn">canDeactivate</span>(): <span class="typ">boolean</span>;
+}
+
+<span class="kw">export const</span> <span class="fn">unsavedChangesGuard</span>: <span class="typ">CanDeactivateFn</span>&lt;<span class="typ">CanComponentDeactivate</span>&gt; =
+  (component) => {
+    <span class="kw">if</span> (component.<span class="fn">canDeactivate</span>()) <span class="kw">return true</span>;
+
+    <span class="kw">return</span> <span class="fn">confirm</span>(<span class="str">'عندك تغييرات غير محفوظة — هتسيبها؟'</span>);
+  };
+
+<span class="cm">// ─── في الـ Component ─────────────────────────────────</span>
+<span class="kw">export class</span> <span class="typ">ItemCreateComponent</span> <span class="kw">implements</span> <span class="typ">CanComponentDeactivate</span> {
+  form = <span class="kw">this</span>.fb.<span class="fn">group</span>({ title: [<span class="str">''</span>] });
+
+  <span class="fn">canDeactivate</span>(): <span class="typ">boolean</span> {
+    <span class="kw">return</span> <span class="kw">this</span>.form.pristine;  <span class="cm">// true لو مش فيه تغييرات</span>
+  }
+}</pre>
+      </div>
+
+      <div class="doc-h2">تطبيق الـ Guards على الـ Routes</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — app.routes.ts</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { authGuard, adminGuard } <span class="kw">from</span> <span class="str">'./guards/auth.guard'</span>;
+<span class="kw">import</span> { unsavedChangesGuard } <span class="kw">from</span> <span class="str">'./guards/unsaved-changes.guard'</span>;
+
+<span class="kw">export const</span> routes: <span class="typ">Routes</span> = [
+  <span class="cm">// صفحة عامة — بدون guard</span>
+  { path: <span class="str">'login'</span>, <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./pages/login.component'</span>).then(m => m.<span class="typ">LoginComponent</span>) },
+
+  <span class="cm">// صفحة محمية — لازم يكون logged in</span>
+  {
+    path: <span class="str">'items'</span>,
+    canActivate: [authGuard],
+    <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./components/item-list/item-list.component'</span>).then(m => m.<span class="typ">ItemListComponent</span>)
+  },
+
+  <span class="cm">// صفحة فيها فورم — حماية من المغادرة بدون حفظ</span>
+  {
+    path: <span class="str">'items/create'</span>,
+    canActivate: [authGuard],
+    canDeactivate: [unsavedChangesGuard],
+    <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./components/item-create/item-create.component'</span>).then(m => m.<span class="typ">ItemCreateComponent</span>)
+  },
+
+  <span class="cm">// صفحة للـ admins فقط</span>
+  {
+    path: <span class="str">'admin'</span>,
+    canActivate: [authGuard, adminGuard],
+    <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./pages/admin.component'</span>).then(m => m.<span class="typ">AdminComponent</span>)
+  },
+
+  { path: <span class="str">'**'</span>, redirectTo: <span class="str">'/items'</span> }
+];</pre>
+      </div>
+
+      <div class="doc-h2">canActivateChild — حماية كل الـ child routes دفعة واحدة</div>
+      <p class="doc-p">بدل ما تكتب <code>canActivate</code> على كل route، بتحميهم كلهم مع بعض من parent واحد:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — حماية مجموعة routes</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">export const</span> routes: <span class="typ">Routes</span> = [
+  {
+    path: <span class="str">'items'</span>,
+    canActivate: [authGuard],       <span class="cm">// ← بيحمي الـ parent</span>
+    canActivateChild: [authGuard],  <span class="cm">// ← وكل الـ children تلقائياً</span>
+    children: [
+      { path: <span class="str">''</span>,         <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./item-list.component'</span>).then(m => m.<span class="typ">ItemListComponent</span>) },
+      { path: <span class="str">'create'</span>,   <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./item-create.component'</span>).then(m => m.<span class="typ">ItemCreateComponent</span>) },
+      { path: <span class="str">'edit/:id'</span>, <span class="fn">loadComponent</span>: () => <span class="kw">import</span>(<span class="str">'./item-edit.component'</span>).then(m => m.<span class="typ">ItemEditComponent</span>) },
+    ]
+  }
+];</pre>
+      </div>
+
+      <div class="doc-h2">ملخص أنواع الـ Guards</div>
+      <table class="doc-table">
+        <thead><tr><th>الـ Guard</th><th>السؤال اللي بيجاوبه</th><th>أشهر استخدام</th></tr></thead>
+        <tbody>
+          <tr><td>canActivate</td><td>هل يقدر يفتح الـ route؟</td><td>Authentication — هل logged in؟</td></tr>
+          <tr><td>canActivateChild</td><td>هل يقدر يفتح أي child route؟</td><td>حماية section كامل دفعة واحدة</td></tr>
+          <tr><td>canDeactivate</td><td>هل يقدر يسيب الـ route؟</td><td>Unsaved changes في الفورم</td></tr>
+          <tr><td>canMatch</td><td>هل الـ route ده ينطبق على الـ URL؟</td><td>تحميل route مختلف حسب الـ role</td></tr>
+          <tr><td>resolve</td><td>جلب بيانات قبل الدخول</td><td>Pre-fetch data قبل فتح الصفحة</td></tr>
+        </tbody>
+      </table>
+      <div class="note-box warning">⚠️ <strong>Angular 14+</strong> بقى الـ Functional Guards هي الموصى بيها (زي اللي فوق) بدل الـ Class-based Guards اللي كانت بتستخدم <code>implements CanActivate</code>. الـ functional أبسط وأسهل في الـ testing.</div>
+      <div class="note-box">💡 ممكن تحط أكتر من guard على نفس الـ route: <code>canActivate: [authGuard, adminGuard]</code> — Angular بتشغّلهم بالترتيب وبتوقف عند أول واحد يرجع false.</div>
+    `
+  },
+  {
+    id: "shared",
+    num: "07",
+    title: "Shared Components",
+    sub: "مكونات مشتركة تتكرر في كل الصفحات",
+    tags: ["shared", "navbar", "spinner", "loading", "مشترك", "نافبار", "لودنج"],
+    content: `
+      <div class="doc-h2">Navbar Component</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="dec">@Component</span>({
+  selector: <span class="str">'app-navbar'</span>,
+  standalone: <span class="kw">true</span>,
+  imports: [<span class="typ">RouterLink</span>, <span class="typ">RouterLinkActive</span>],
+  template: <span class="str">\`
+    &lt;nav class='navbar'&gt;
+      &lt;span class='brand'&gt;My CRUD App&lt;/span&gt;
+      &lt;a routerLink='/items' routerLinkActive='active'&gt;Items&lt;/a&gt;
+      &lt;a routerLink='/items/create'&gt;+ New Item&lt;/a&gt;
+    &lt;/nav&gt;
+  \`</span>
+})
+<span class="kw">export class</span> <span class="typ">NavbarComponent</span> {}</pre>
+      </div>
+
+      <div class="doc-h2">Loading Spinner Component</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="dec">@Component</span>({
+  selector: <span class="str">'app-loading-spinner'</span>,
+  standalone: <span class="kw">true</span>,
+  imports: [<span class="typ">NgIf</span>],
+  template: <span class="str">\`
+    &lt;div *ngIf='isLoading' class='spinner'&gt;&lt;/div&gt;
+  \`</span>
+})
+<span class="kw">export class</span> <span class="typ">LoadingSpinnerComponent</span> {
+  <span class="dec">@Input</span>() isLoading = <span class="kw">false</span>;
+}</pre>
+      </div>
+    `
+  },
+  {
+    id: "read",
+    num: "08",
+    title: "CRUD — List Component (Read)",
+    sub: "عرض قائمة العناصر وجلبها من الـ API",
+    tags: ["read", "list", "getall", "ngoninit", "subscribe", "ngfor", "قراءة", "قائمة", "عرض"],
+    content: `
+      <div class="doc-h2">item-list.component.ts</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">export class</span> <span class="typ">ItemListComponent</span> <span class="kw">implements</span> <span class="typ">OnInit</span> {
+  items: <span class="typ">Item</span>[] = [];
+  isLoading = <span class="kw">false</span>;
+  error = <span class="str">''</span>;
+
+  <span class="kw">constructor</span>(
+    <span class="kw">private</span> itemService: <span class="typ">ItemService</span>,
+    <span class="kw">private</span> router: <span class="typ">Router</span>
+  ) {}
+
+  <span class="fn">ngOnInit</span>(): <span class="typ">void</span> {
+    <span class="kw">this</span>.<span class="fn">loadItems</span>();
+  }
+
+  <span class="fn">loadItems</span>(): <span class="typ">void</span> {
+    <span class="kw">this</span>.isLoading = <span class="kw">true</span>;
+    <span class="kw">this</span>.itemService.<span class="fn">getAll</span>().<span class="fn">subscribe</span>({
+      next: (data) => {
+        <span class="kw">this</span>.items = data.<span class="fn">slice</span>(<span class="num">0</span>, <span class="num">10</span>);
+        <span class="kw">this</span>.isLoading = <span class="kw">false</span>;
+      },
+      error: () => { <span class="kw">this</span>.error = <span class="str">'فشل تحميل البيانات'</span>; }
+    });
+  }
+
+  <span class="fn">onEdit</span>(id: <span class="typ">number</span>): <span class="typ">void</span> {
+    <span class="kw">this</span>.router.<span class="fn">navigate</span>([<span class="str">'/items/edit'</span>, id]);
+  }
+
+  <span class="fn">onDelete</span>(id: <span class="typ">number</span>): <span class="typ">void</span> {
+    <span class="kw">if</span> (<span class="fn">confirm</span>(<span class="str">'هل أنت متأكد؟'</span>)) {
+      <span class="kw">this</span>.itemService.<span class="fn">delete</span>(id).<span class="fn">subscribe</span>(() => {
+        <span class="kw">this</span>.items = <span class="kw">this</span>.items.<span class="fn">filter</span>(i => i.id !== id);
+      });
+    }
+  }
+}</pre>
+      </div>
+
+      <div class="doc-h2">item-list.component.html</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">HTML</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre>&lt;<span class="fn">app-loading-spinner</span> [isLoading]=<span class="str">"isLoading"</span> /&gt;
+
+&lt;<span class="kw">table</span> *ngIf=<span class="str">"!isLoading"</span>&gt;
+  &lt;<span class="kw">thead</span>&gt;
+    &lt;<span class="kw">tr</span>&gt;
+      &lt;<span class="kw">th</span>&gt;#&lt;/<span class="kw">th</span>&gt;&lt;<span class="kw">th</span>&gt;العنوان&lt;/<span class="kw">th</span>&gt;&lt;<span class="kw">th</span>&gt;الإجراءات&lt;/<span class="kw">th</span>&gt;
+    &lt;/<span class="kw">tr</span>&gt;
+  &lt;/<span class="kw">thead</span>&gt;
+  &lt;<span class="kw">tbody</span>&gt;
+    &lt;<span class="kw">tr</span> *ngFor=<span class="str">"let item of items"</span>&gt;
+      &lt;<span class="kw">td</span>&gt;{{ item.id }}&lt;/<span class="kw">td</span>&gt;
+      &lt;<span class="kw">td</span>&gt;{{ item.title }}&lt;/<span class="kw">td</span>&gt;
+      &lt;<span class="kw">td</span>&gt;
+        &lt;<span class="kw">button</span> (click)=<span class="str">"onEdit(item.id)"</span>&gt;تعديل&lt;/<span class="kw">button</span>&gt;
+        &lt;<span class="kw">button</span> (click)=<span class="str">"onDelete(item.id)"</span>&gt;حذف&lt;/<span class="kw">button</span>&gt;
+      &lt;/<span class="kw">td</span>&gt;
+    &lt;/<span class="kw">tr</span>&gt;
+  &lt;/<span class="kw">tbody</span>&gt;
+&lt;/<span class="kw">table</span>&gt;</pre>
+      </div>
+    `
+  },
+  {
+    id: "create",
+    num: "09",
+    title: "CRUD — Create Component",
+    sub: "إنشاء عنصر جديد باستخدام Reactive Forms",
+    tags: ["create", "form", "reactive", "formbuilder", "validators", "post", "إنشاء", "فورم"],
+    content: `
+      <div class="doc-h2">item-create.component.ts</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">export class</span> <span class="typ">ItemCreateComponent</span> {
+  form = <span class="kw">this</span>.fb.<span class="fn">group</span>({
+    title: [<span class="str">''</span>, [Validators.required, Validators.<span class="fn">minLength</span>(<span class="num">3</span>)]],
+    description: [<span class="str">''</span>, Validators.required],
+    status: [<span class="str">'active'</span>]
+  });
+
+  isSubmitting = <span class="kw">false</span>;
+
+  <span class="kw">constructor</span>(
+    <span class="kw">private</span> fb: <span class="typ">FormBuilder</span>,
+    <span class="kw">private</span> itemService: <span class="typ">ItemService</span>,
+    <span class="kw">private</span> router: <span class="typ">Router</span>
+  ) {}
+
+  <span class="fn">onSubmit</span>(): <span class="typ">void</span> {
+    <span class="kw">if</span> (<span class="kw">this</span>.form.invalid) <span class="kw">return</span>;
+
+    <span class="kw">this</span>.isSubmitting = <span class="kw">true</span>;
+    <span class="kw">this</span>.itemService.<span class="fn">create</span>(<span class="kw">this</span>.form.value <span class="kw">as any</span>).<span class="fn">subscribe</span>({
+      next: () => <span class="kw">this</span>.router.<span class="fn">navigate</span>([<span class="str">'/items'</span>]),
+      error: () => { <span class="kw">this</span>.isSubmitting = <span class="kw">false</span>; }
+    });
+  }
+
+  <span class="cm">// Helper للوصول للـ form controls</span>
+  <span class="kw">get</span> f() { <span class="kw">return this</span>.form.controls; }
+}</pre>
+      </div>
+
+      <div class="doc-h2">item-create.component.html</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">HTML</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre>&lt;<span class="kw">form</span> [formGroup]=<span class="str">"form"</span> (ngSubmit)=<span class="str">"onSubmit()"</span>&gt;
+  &lt;<span class="kw">input</span> formControlName=<span class="str">"title"</span> type=<span class="str">"text"</span> /&gt;
+  &lt;<span class="kw">span</span> *ngIf=<span class="str">"f['title'].errors?.['required']"</span>&gt;
+    العنوان مطلوب
+  &lt;/<span class="kw">span</span>&gt;
+
+  &lt;<span class="kw">textarea</span> formControlName=<span class="str">"description"</span>&gt;&lt;/<span class="kw">textarea</span>&gt;
+
+  &lt;<span class="kw">select</span> formControlName=<span class="str">"status"</span>&gt;
+    &lt;<span class="kw">option</span> value=<span class="str">"active"</span>&gt;نشط&lt;/<span class="kw">option</span>&gt;
+    &lt;<span class="kw">option</span> value=<span class="str">"inactive"</span>&gt;غير نشط&lt;/<span class="kw">option</span>&gt;
+  &lt;/<span class="kw">select</span>&gt;
+
+  &lt;<span class="kw">button</span> type=<span class="str">"submit"</span> [disabled]=<span class="str">"form.invalid || isSubmitting"</span>&gt;
+    {{ isSubmitting ? <span class="str">'جاري الحفظ...'</span> : <span class="str">'حفظ'</span> }}
+  &lt;/<span class="kw">button</span>&gt;
+&lt;/<span class="kw">form</span>&gt;</pre>
+      </div>
+    `
+  },
+  {
+    id: "update",
+    num: "10",
+    title: "CRUD — Update Component",
+    sub: "تعديل عنصر موجود مع تحميل بياناته",
+    tags: ["update", "edit", "patchvalue", "activatedroute", "put", "تعديل", "تحديث"],
+    content: `
+      <div class="doc-h2">item-edit.component.ts</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">export class</span> <span class="typ">ItemEditComponent</span> <span class="kw">implements</span> <span class="typ">OnInit</span> {
+  itemId!: <span class="typ">number</span>;
+
+  form = <span class="kw">this</span>.fb.<span class="fn">group</span>({
+    title: [<span class="str">''</span>, Validators.required],
+    description: [<span class="str">''</span>, Validators.required],
+    status: [<span class="str">'active'</span>]
+  });
+
+  <span class="kw">constructor</span>(
+    <span class="kw">private</span> fb: <span class="typ">FormBuilder</span>,
+    <span class="kw">private</span> itemService: <span class="typ">ItemService</span>,
+    <span class="kw">private</span> route: <span class="typ">ActivatedRoute</span>,   <span class="cm">// لقراءة الـ id من URL</span>
+    <span class="kw">private</span> router: <span class="typ">Router</span>
+  ) {}
+
+  <span class="fn">ngOnInit</span>(): <span class="typ">void</span> {
+    <span class="cm">// قراءة الـ id من الـ URL: /items/edit/5</span>
+    <span class="kw">this</span>.itemId = <span class="fn">Number</span>(<span class="kw">this</span>.route.snapshot.paramMap.<span class="fn">get</span>(<span class="str">'id'</span>));
+
+    <span class="cm">// تحميل البيانات وملء الفورم</span>
+    <span class="kw">this</span>.itemService.<span class="fn">getById</span>(<span class="kw">this</span>.itemId).<span class="fn">subscribe</span>(item => {
+      <span class="kw">this</span>.form.<span class="fn">patchValue</span>(item);  <span class="cm">// ← الفارق عن Create</span>
+    });
+  }
+
+  <span class="fn">onSubmit</span>(): <span class="typ">void</span> {
+    <span class="kw">if</span> (<span class="kw">this</span>.form.invalid) <span class="kw">return</span>;
+    <span class="kw">this</span>.itemService.<span class="fn">update</span>(<span class="kw">this</span>.itemId, <span class="kw">this</span>.form.value <span class="kw">as any</span>)
+      .<span class="fn">subscribe</span>(() => <span class="kw">this</span>.router.<span class="fn">navigate</span>([<span class="str">'/items'</span>]));
+  }
+}</pre>
+      </div>
+      <div class="note-box">💡 الفرق الأساسي بين Create وEdit: في Edit بنستخدم <strong>ActivatedRoute</strong> لقراءة الـ id، وبنستخدم <strong>patchValue</strong> لملء الفورم بالبيانات الموجودة.</div>
+    `
+  },
+  {
+    id: "delete",
+    num: "11",
+    title: "CRUD — Delete Operation",
+    sub: "حذف العناصر مع تأكيد المستخدم",
+    tags: ["delete", "remove", "حذف", "filter", "confirm"],
+    content: `
+      <div class="doc-h2">تدفق عملية الحذف</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="fn">onDelete</span>(id: <span class="typ">number</span>): <span class="typ">void</span> {
+  <span class="cm">// خطوة 1: تأكيد من المستخدم</span>
+  <span class="kw">if</span> (!<span class="fn">confirm</span>(<span class="str">'هل أنت متأكد من الحذف؟'</span>)) <span class="kw">return</span>;
+
+  <span class="cm">// خطوة 2: استدعاء الـ Service</span>
+  <span class="kw">this</span>.itemService.<span class="fn">delete</span>(id).<span class="fn">subscribe</span>({
+    next: () => {
+      <span class="cm">// خطوة 3: تحديث الـ UI</span>
+      <span class="kw">this</span>.items = <span class="kw">this</span>.items.<span class="fn">filter</span>(item => item.id !== id);
+    },
+    error: () => <span class="fn">alert</span>(<span class="str">'حدث خطأ، حاول مرة أخرى'</span>)
+  });
+}</pre>
+      </div>
+
+      <div class="doc-h2">ملخص عمليات CRUD</div>
+      <table class="doc-table">
+        <thead><tr><th>العملية</th><th>HTTP Method</th><th>Service Method</th><th>URL</th></tr></thead>
+        <tbody>
+          <tr><td>Create</td><td>POST</td><td>create(dto)</td><td>/items</td></tr>
+          <tr><td>Read All</td><td>GET</td><td>getAll()</td><td>/items</td></tr>
+          <tr><td>Read One</td><td>GET</td><td>getById(id)</td><td>/items/:id</td></tr>
+          <tr><td>Update</td><td>PUT</td><td>update(id, dto)</td><td>/items/:id</td></tr>
+          <tr><td>Delete</td><td>DELETE</td><td>delete(id)</td><td>/items/:id</td></tr>
+        </tbody>
+      </table>
+    `
+  },
+  {
+    id: "interceptor",
+    num: "12",
+    title: "HTTP Interceptor",
+    sub: "اعتراض كل الـ HTTP requests وتعديلها مركزياً",
+    tags: ["interceptor", "http", "token", "auth", "header", "loading", "error", "اعتراض", "توكن", "مصادقة", "تحميل"],
+    content: `
+      <div class="doc-h2">ما هو الـ Interceptor؟</div>
+      <p class="doc-p">الـ HTTP Interceptor بيسمحلك تعترض كل request وresponse بيعدي في تطبيقك وتعمل عليه حاجات قبل أو بعد ما يوصل للـ API — من غير ما تكرر الكود في كل service.</p>
+      <ul class="bullet-list">
+        <li>إضافة Authorization Token تلقائياً لكل request</li>
+        <li>إظهار Loading Spinner عند كل request</li>
+        <li>معالجة الأخطاء مركزياً (401، 403، 500)</li>
+        <li>Logging لكل الـ requests في الـ development</li>
+      </ul>
+
+      <div class="doc-h2">إنشاء الـ Interceptor</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm"># إنشاء interceptor باستخدام CLI</span>
+ng g interceptor interceptors/auth
+
+<span class="cm"># هينشئ ملف:</span>
+<span class="cm"># src/app/interceptors/auth.interceptor.ts</span></pre>
+      </div>
+
+      <div class="doc-h2">Auth Interceptor — إضافة Token</div>
+      <p class="doc-p">أشهر استخدام للـ Interceptor هو إضافة الـ JWT Token تلقائياً لكل request:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — auth.interceptor.ts</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { HttpInterceptorFn } <span class="kw">from</span> <span class="str">'@angular/common/http'</span>;
+
+<span class="cm">// Functional Interceptor (Angular 15+)</span>
+<span class="kw">export const</span> <span class="fn">authInterceptor</span>: <span class="typ">HttpInterceptorFn</span> = (req, next) => {
+  <span class="cm">// جلب الـ token من localStorage</span>
+  <span class="kw">const</span> token = localStorage.<span class="fn">getItem</span>(<span class="str">'auth_token'</span>);
+
+  <span class="cm">// لو مفيش token، ابعت الـ request عادي</span>
+  <span class="kw">if</span> (!token) <span class="kw">return</span> <span class="fn">next</span>(req);
+
+  <span class="cm">// استنساخ الـ request مع إضافة الـ Authorization header</span>
+  <span class="kw">const</span> authReq = req.<span class="fn">clone</span>({
+    headers: req.headers.<span class="fn">set</span>(<span class="str">'Authorization'</span>, <span class="str">\`Bearer \${token}\`</span>)
+  });
+
+  <span class="kw">return</span> <span class="fn">next</span>(authReq);
+};</pre>
+      </div>
+
+      <div class="doc-h2">Error Interceptor — معالجة الأخطاء مركزياً</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — error.interceptor.ts</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { HttpInterceptorFn, HttpErrorResponse } <span class="kw">from</span> <span class="str">'@angular/common/http'</span>;
+<span class="kw">import</span> { <span class="fn">catchError</span>, <span class="fn">throwError</span> } <span class="kw">from</span> <span class="str">'rxjs'</span>;
+<span class="kw">import</span> { <span class="fn">inject</span> } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { Router } <span class="kw">from</span> <span class="str">'@angular/router'</span>;
+
+<span class="kw">export const</span> <span class="fn">errorInterceptor</span>: <span class="typ">HttpInterceptorFn</span> = (req, next) => {
+  <span class="kw">const</span> router = <span class="fn">inject</span>(<span class="typ">Router</span>);
+
+  <span class="kw">return</span> <span class="fn">next</span>(req).<span class="fn">pipe</span>(
+    <span class="fn">catchError</span>((error: <span class="typ">HttpErrorResponse</span>) => {
+      <span class="kw">switch</span> (error.status) {
+        <span class="kw">case</span> <span class="num">401</span>:
+          <span class="cm">// غير مصادق — روّح لصفحة Login</span>
+          localStorage.<span class="fn">removeItem</span>(<span class="str">'auth_token'</span>);
+          router.<span class="fn">navigate</span>([<span class="str">'/login'</span>]);
+          <span class="kw">break</span>;
+        <span class="kw">case</span> <span class="num">403</span>:
+          <span class="cm">// مش مصرحلك — Forbidden</span>
+          router.<span class="fn">navigate</span>([<span class="str">'/forbidden'</span>]);
+          <span class="kw">break</span>;
+        <span class="kw">case</span> <span class="num">500</span>:
+          <span class="cm">// خطأ في السيرفر</span>
+          console.<span class="fn">error</span>(<span class="str">'Server Error:'</span>, error.message);
+          <span class="kw">break</span>;
+      }
+      <span class="kw">return</span> <span class="fn">throwError</span>(() => error);
+    })
+  );
+};</pre>
+      </div>
+
+      <div class="doc-h2">Loading Interceptor — Spinner تلقائي</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — loading.interceptor.ts</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { HttpInterceptorFn } <span class="kw">from</span> <span class="str">'@angular/common/http'</span>;
+<span class="kw">import</span> { <span class="fn">inject</span> } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { <span class="fn">finalize</span> } <span class="kw">from</span> <span class="str">'rxjs'</span>;
+<span class="kw">import</span> { <span class="typ">LoadingService</span> } <span class="kw">from</span> <span class="str">'../services/loading.service'</span>;
+
+<span class="kw">export const</span> <span class="fn">loadingInterceptor</span>: <span class="typ">HttpInterceptorFn</span> = (req, next) => {
+  <span class="kw">const</span> loadingService = <span class="fn">inject</span>(<span class="typ">LoadingService</span>);
+
+  loadingService.<span class="fn">show</span>();   <span class="cm">// ← أظهر الـ spinner</span>
+
+  <span class="kw">return</span> <span class="fn">next</span>(req).<span class="fn">pipe</span>(
+    <span class="fn">finalize</span>(() => loadingService.<span class="fn">hide</span>())  <span class="cm">// ← أخفه دايماً بعد الانتهاء</span>
+  );
+};
+
+<span class="cm">// ─── Loading Service مطلوب للـ Interceptor ────────────────</span>
+<span class="dec">@Injectable</span>({ providedIn: <span class="str">'root'</span> })
+<span class="kw">export class</span> <span class="typ">LoadingService</span> {
+  isLoading$ = <span class="kw">new</span> <span class="typ">BehaviorSubject</span>&lt;<span class="typ">boolean</span>&gt;(<span class="kw">false</span>);
+  <span class="fn">show</span>() { <span class="kw">this</span>.isLoading$.<span class="fn">next</span>(<span class="kw">true</span>); }
+  <span class="fn">hide</span>() { <span class="kw">this</span>.isLoading$.<span class="fn">next</span>(<span class="kw">false</span>); }
+}</pre>
+      </div>
+
+      <div class="doc-h2">تسجيل الـ Interceptors في app.config.ts</div>
+      <p class="doc-p">بعد إنشاء الـ interceptors، لازم تسجّلهم في الـ providers:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — app.config.ts</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { <span class="fn">provideHttpClient</span>, <span class="fn">withInterceptors</span> } <span class="kw">from</span> <span class="str">'@angular/common/http'</span>;
+<span class="kw">import</span> { authInterceptor } <span class="kw">from</span> <span class="str">'./interceptors/auth.interceptor'</span>;
+<span class="kw">import</span> { errorInterceptor } <span class="kw">from</span> <span class="str">'./interceptors/error.interceptor'</span>;
+<span class="kw">import</span> { loadingInterceptor } <span class="kw">from</span> <span class="str">'./interceptors/loading.interceptor'</span>;
+
+<span class="kw">export const</span> appConfig: <span class="typ">ApplicationConfig</span> = {
+  providers: [
+    <span class="fn">provideRouter</span>(routes),
+    <span class="fn">provideHttpClient</span>(
+      <span class="fn">withInterceptors</span>([
+        authInterceptor,     <span class="cm">// ← أول حاجة: إضافة الـ token</span>
+        loadingInterceptor,  <span class="cm">// ← تاني حاجة: إظهار الـ loading</span>
+        errorInterceptor,    <span class="cm">// ← تالت حاجة: معالجة الأخطاء</span>
+      ])
+    ),
+  ]
+};</pre>
+      </div>
+      <div class="note-box warning">⚠️ <strong>الترتيب مهم!</strong> الـ interceptors بتتنفذ بالترتيب اللي سجّلتهم بيه. authInterceptor لازم يكون الأول عشان يضيف الـ token قبل أي حاجة تانية.</div>
+
+      <div class="doc-h2">مقارنة أنواع الـ Interceptors</div>
+      <table class="doc-table">
+        <thead><tr><th>الـ Interceptor</th><th>الغرض</th><th>متى تستخدمه</th></tr></thead>
+        <tbody>
+          <tr><td>Auth Interceptor</td><td>إضافة JWT Token للـ headers</td><td>أي تطبيق بـ Authentication</td></tr>
+          <tr><td>Error Interceptor</td><td>معالجة 401/403/500 مركزياً</td><td>دايماً — أفضل من error handling في كل service</td></tr>
+          <tr><td>Loading Interceptor</td><td>Spinner تلقائي مع كل request</td><td>UX أحسن بدون تكرار isLoading في كل component</td></tr>
+          <tr><td>Logging Interceptor</td><td>تسجيل كل الـ requests في الـ console</td><td>Development والـ debugging فقط</td></tr>
+        </tbody>
+      </table>
+
+      <div class="note-box">💡 <strong>Functional vs Class-based:</strong> Angular 15+ بيدعم الـ Functional Interceptors (زي اللي فوق) وهي أبسط وأحدث. الـ Class-based interceptors (بتستخدم <strong>implements HttpInterceptor</strong>) لا تزال تشتغل بس الـ functional هي الموصى بيها في المشاريع الجديدة.</div>
+    `
+  },
+  {
+    id: "signals",
+    num: "13",
+    title: "Angular Signals",
+    sub: "نظام reactivity الجديد في Angular 16+",
+    tags: ["signals", "signal", "computed", "effect", "reactive", "state", "سيجنالز", "ريآكتيف", "حالة"],
+    content: `
+      <div class="doc-h2">ما هي الـ Signals؟</div>
+      <p class="doc-p">الـ Signals هي نظام الـ reactivity الجديد في Angular 16+. بدل الاعتماد على Zone.js لاكتشاف التغييرات، الـ Signals بتخبر Angular بالضبط إيه اللي اتغيّر — ده بيخلي التطبيق أسرع وأبسط.</p>
+      <ul class="bullet-list">
+        <li><strong>signal()</strong> — قيمة reactive بسيطة، بتقراها بـ <code>()value</code></li>
+        <li><strong>computed()</strong> — قيمة مشتقة من signals تانية، بتتحدث تلقائياً</li>
+        <li><strong>effect()</strong> — كود بيشتغل كل ما signal تتغير (logging, side effects)</li>
+      </ul>
+      <div class="note-box">💡 الـ Signals متاحة من <strong>Angular 16</strong> وبقت Stable في <strong>Angular 17</strong>. هي البديل الحديث لـ BehaviorSubject في كتير من الحالات.</div>
+
+      <div class="doc-h2">1. Basic Signal — Counter</div>
+      <p class="doc-p">أبسط مثال: counter بيتحدث عند الضغط على الأزرار.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — signals-demo.ts</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="kw">import</span> { Component, signal, computed, effect } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { CommonModule } <span class="kw">from</span> <span class="str">'@angular/common'</span>;
+
+<span class="dec">@Component</span>({
+  selector: <span class="str">'app-signals-demo'</span>,
+  standalone: <span class="kw">true</span>,
+  imports: [CommonModule],
+  templateUrl: <span class="str">'./signals-demo.html'</span>,
+})
+<span class="kw">export class</span> <span class="typ">SignalsDemo</span> {
+  <span class="cm">// 1. Basic Signal — قيمة reactive بسيطة</span>
+  count = <span class="fn">signal</span>(<span class="num">0</span>);
+
+  <span class="cm">// 2. Computed Signals — مشتقة تلقائياً من count</span>
+  doubleCount = <span class="fn">computed</span>(() => <span class="kw">this</span>.<span class="fn">count</span>() * <span class="num">2</span>);
+  isEven      = <span class="fn">computed</span>(() => <span class="kw">this</span>.<span class="fn">count</span>() % <span class="num">2</span> === <span class="num">0</span>);
+
+  <span class="kw">constructor</span>() {
+    <span class="cm">// 3. Effect — بيشتغل كل ما count تتغير</span>
+    <span class="fn">effect</span>(() => {
+      console.<span class="fn">log</span>(<span class="str">\`Count: \${this.count()}, Double: \${this.doubleCount()}\`</span>);
+    });
+  }
+
+  <span class="fn">increment</span>(): <span class="typ">void</span> { <span class="kw">this</span>.count.<span class="fn">set</span>(<span class="kw">this</span>.<span class="fn">count</span>() + <span class="num">1</span>); }
+  <span class="fn">decrement</span>(): <span class="typ">void</span> { <span class="kw">this</span>.count.<span class="fn">set</span>(<span class="kw">this</span>.<span class="fn">count</span>() - <span class="num">1</span>); }
+  <span class="fn">reset</span>():     <span class="typ">void</span> { <span class="kw">this</span>.count.<span class="fn">set</span>(<span class="num">0</span>); }
+}</pre>
+      </div>
+
+      <div class="doc-h2">2. Template — قراءة الـ Signals</div>
+      <p class="doc-p">في الـ template، الـ signal بتتقرأ كـ function call بالـ <code>()</code> — مش كـ property عادية:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">HTML — signals-demo.html</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm">&lt;!-- قراءة signal بـ () --&gt;</span>
+&lt;<span class="kw">p</span> class=<span class="str">"counter-value"</span>&gt;{{ count() }}&lt;/<span class="kw">p</span>&gt;
+
+<span class="cm">&lt;!-- computed signals --&gt;</span>
+&lt;<span class="kw">span</span>&gt;Double: {{ doubleCount() }}&lt;/<span class="kw">span</span>&gt;
+&lt;<span class="kw">span</span> [ngClass]=<span class="str">"{ 'even': isEven(), 'odd': !isEven() }"</span>&gt;
+  {{ isEven() ? '✓ Even' : '✗ Odd' }}
+&lt;/<span class="kw">span</span>&gt;
+
+<span class="cm">&lt;!-- أزرار التحكم --&gt;</span>
+&lt;<span class="kw">button</span> (click)=<span class="str">"decrement()"</span>&gt;➖&lt;/<span class="kw">button</span>&gt;
+&lt;<span class="kw">button</span> (click)=<span class="str">"reset()"</span>&gt;🔄&lt;/<span class="kw">button</span>&gt;
+&lt;<span class="kw">button</span> (click)=<span class="str">"increment()"</span>&gt;➕&lt;/<span class="kw">button</span>&gt;</pre>
+      </div>
+
+      <div class="doc-h2">3. Todo List — Signal مع Object Array</div>
+      <p class="doc-p">مثال أقوى: todo list كاملة باستخدام signal لـ array من objects:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — Todo List Signals</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm">// Signal لـ array من objects — مع Type</span>
+todos = <span class="fn">signal</span>&lt;{ id: <span class="typ">number</span>; title: <span class="typ">string</span>; completed: <span class="typ">boolean</span> }[]&gt;([
+  { id: <span class="num">1</span>, title: <span class="str">'Learn Signals'</span>, completed: <span class="kw">false</span> },
+  { id: <span class="num">2</span>, title: <span class="str">'Build a Demo'</span>,  completed: <span class="kw">false</span> },
+]);
+
+<span class="cm">// Computed من الـ array signal</span>
+completedCount = <span class="fn">computed</span>(() =>
+  <span class="kw">this</span>.<span class="fn">todos</span>().<span class="fn">filter</span>(todo => todo.completed).length
+);
+totalTodos = <span class="fn">computed</span>(() => <span class="kw">this</span>.<span class="fn">todos</span>().length);
+
+<span class="cm">// Input signal</span>
+inputValue = <span class="fn">signal</span>(<span class="str">''</span>);
+
+<span class="cm">// ─── Methods بتستخدم update() للـ arrays ─────────────</span>
+<span class="fn">addTodo</span>(): <span class="typ">void</span> {
+  <span class="kw">if</span> (!<span class="kw">this</span>.<span class="fn">inputValue</span>().<span class="fn">trim</span>()) <span class="kw">return</span>;
+  <span class="kw">this</span>.todos.<span class="fn">update</span>(current => [
+    ...current,
+    { id: current.length + <span class="num">1</span>, title: <span class="kw">this</span>.<span class="fn">inputValue</span>(), completed: <span class="kw">false</span> }
+  ]);
+  <span class="kw">this</span>.inputValue.<span class="fn">set</span>(<span class="str">''</span>);   <span class="cm">// مسح الـ input</span>
+}
+
+<span class="fn">toggleTodo</span>(id: <span class="typ">number</span>): <span class="typ">void</span> {
+  <span class="kw">this</span>.todos.<span class="fn">update</span>(todos =>
+    todos.<span class="fn">map</span>(t => t.id === id ? { ...t, completed: !t.completed } : t)
+  );
+}
+
+<span class="fn">deleteTodo</span>(id: <span class="typ">number</span>): <span class="typ">void</span> {
+  <span class="kw">this</span>.todos.<span class="fn">update</span>(todos => todos.<span class="fn">filter</span>(t => t.id !== id));
+}
+
+<span class="fn">updateInput</span>(value: <span class="typ">string</span>): <span class="typ">void</span> {
+  <span class="kw">this</span>.inputValue.<span class="fn">set</span>(value);
+}</pre>
+      </div>
+
+      <div class="doc-h2">4. Todo Template — عرض الـ Signal Array</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">HTML — Todo Template</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm">&lt;!-- Input --&gt;</span>
+&lt;<span class="kw">input</span>
+  [value]=<span class="str">"inputValue()"</span>
+  (input)=<span class="str">"updateInput(\$event.target.value)"</span>
+  (keyup.enter)=<span class="str">"addTodo()"</span>
+  placeholder=<span class="str">"Add a new todo..."</span>
+/&gt;
+&lt;<span class="kw">button</span> (click)=<span class="str">"addTodo()"</span>&gt;Add Todo&lt;/<span class="kw">button</span>&gt;
+
+<span class="cm">&lt;!-- Stats من computed signals --&gt;</span>
+&lt;<span class="kw">span</span>&gt;Total: {{ totalTodos() }}&lt;/<span class="kw">span</span>&gt;
+&lt;<span class="kw">span</span>&gt;Completed: {{ completedCount() }}&lt;/<span class="kw">span</span>&gt;
+&lt;<span class="kw">span</span>&gt;Remaining: {{ totalTodos() - completedCount() }}&lt;/<span class="kw">span</span>&gt;
+
+<span class="cm">&lt;!-- List من signal array --&gt;</span>
+&lt;<span class="kw">ul</span>&gt;
+  &lt;<span class="kw">li</span> *ngFor=<span class="str">"let todo of todos()"</span> [ngClass]=<span class="str">"{ 'completed': todo.completed }"</span>&gt;
+    &lt;<span class="kw">input</span> type=<span class="str">"checkbox"</span> [checked]=<span class="str">"todo.completed"</span> (change)=<span class="str">"toggleTodo(todo.id)"</span>/&gt;
+    &lt;<span class="kw">span</span>&gt;{{ todo.title }}&lt;/<span class="kw">span</span>&gt;
+    &lt;<span class="kw">button</span> (click)=<span class="str">"deleteTodo(todo.id)"</span>&gt;🗑️&lt;/<span class="kw">button</span>&gt;
+  &lt;/<span class="kw">li</span>&gt;
+&lt;/<span class="kw">ul</span>&gt;</pre>
+      </div>
+
+      <div class="doc-h2">5. الـ 3 طرق لتحديث Signal</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript — set / update / mutate</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre">
+<span class="kw">const</span> count = <span class="fn">signal</span>(<span class="num">0</span>);
+<span class="kw">const</span> items = <span class="fn">signal</span>&lt;<span class="typ">string</span>[]&gt;([]);
+
+<span class="cm">// .set() — استبدال القيمة كاملاً</span>
+count.<span class="fn">set</span>(<span class="num">10</span>);
+items.<span class="fn">set</span>([<span class="str">'A'</span>, <span class="str">'B'</span>]);
+
+<span class="cm">// .update() — تعديل بناءً على القيمة الحالية</span>
+count.<span class="fn">update</span>(v => v + <span class="num">1</span>);
+items.<span class="fn">update</span>(arr => [...arr, <span class="str">'C'</span>]);
+
+<span class="cm">// قراءة القيمة الحالية</span>
+console.<span class="fn">log</span>(count());   <span class="cm">// 11</span>
+console.<span class="fn">log</span>(items());   <span class="cm">// ['A', 'B', 'C']</span></pre>
+      </div>
+
+      <div class="doc-h2">6. Signals مقابل RxJS — متى تستخدم إيه؟</div>
+      <table class="doc-table">
+        <thead><tr><th></th><th>Signals</th><th>RxJS / Observable</th></tr></thead>
+        <tbody>
+          <tr><td>الاستخدام الأمثل</td><td>UI State — حالة الصفحة</td><td>HTTP requests، Events، Streams</td></tr>
+          <tr><td>القراءة في Template</td><td><code>{{ count() }}</code> مباشرة</td><td>يحتاج <code>async</code> pipe</td></tr>
+          <tr><td>الـ Boilerplate</td><td>بسيط جداً</td><td>subscribe / unsubscribe</td></tr>
+          <tr><td>الـ Performance</td><td>Fine-grained — أسرع</td><td>Zone.js dependency</td></tr>
+          <tr><td>متى تستخدمه؟</td><td>Local state، Form values، Counters</td><td>API calls، WebSockets، Timers</td></tr>
+        </tbody>
+      </table>
+      <div class="note-box warning">⚠️ الـ Signals مش بديل كامل لـ RxJS — استخدمهم مع بعض. HTTP requests تفضل مع <strong>HttpClient + Observable</strong>، والـ UI state تحوّله لـ <strong>Signals</strong>.</div>
+      <div class="note-box">💡 ممكن تحوّل Observable لـ Signal باستخدام <strong>toSignal()</strong> من <code>@angular/core/rxjs-interop</code> — وهكذا تجمع الاتنين مع بعض بسهولة.</div>
+    `
+  },
+  {
+    id: "running",
+    num: "14",
+    title: "Running & Testing the Demo",
+    sub: "تشغيل التطبيق واختباره",
+    tags: ["run", "test", "build", "serve", "تشغيل", "اختبار", "بناء", "demo"],
+    content: `
+      <div class="doc-h2">أوامر التشغيل الأساسية</div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">نسخ</button></div>
+        <pre><span class="cm"># تشغيل Development Server</span>
+ng serve
+
+<span class="cm"># مع فتح المتصفح تلقائياً</span>
+ng serve <span class="kw">--open</span>
+
+<span class="cm"># Build للـ Production</span>
+ng build <span class="kw">--configuration</span> production</pre>
+      </div>
+
+      <div class="doc-h2">اختبار عمليات CRUD</div>
+      <table class="doc-table">
+        <thead><tr><th>الخطوة</th><th>الـ URL</th><th>ما تتوقعه</th></tr></thead>
+        <tbody>
+          <tr><td>1 — عرض القائمة</td><td>localhost:4200/items</td><td>قائمة العناصر</td></tr>
+          <tr><td>2 — إنشاء عنصر</td><td>localhost:4200/items/create</td><td>فورم الإنشاء</td></tr>
+          <tr><td>3 — تعديل عنصر</td><td>localhost:4200/items/edit/1</td><td>فورم مملوء بالبيانات</td></tr>
+          <tr><td>4 — Interceptor</td><td>Network tab في DevTools</td><td>Authorization header في كل request</td></tr>
+        </tbody>
+      </table>
+
+      <ul class="bullet-list">
+        <li>ابدأ دايماً بشرح هيكل المشروع قبل الكود</li>
+        <li>استخدم Browser DevTools — Network tab لإظهار الـ HTTP calls</li>
+        <li>اشرح الـ Observable وليه بنستخدمه بدل الـ Promise</li>
+        <li>وضّح تأثير الـ Interceptor من خلال الـ Network tab</li>
+      </ul>
+      <div class="note-box success">🚀 مبروك! عندك Angular CRUD Application كامل مع Interceptors. الخطوة الجاية: ربطه بـ Backend حقيقي وإضافة Authentication كاملة!</div>
+    `
+  },
+];
+
+// ══════════════════════════════════════════════════════════════
+// RENDER ENGINE
+// ══════════════════════════════════════════════════════════════
+const navList = document.getElementById('navList');
+const sectionsContainer = document.getElementById('sections-container');
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('search-results');
+const resultsContainer = document.getElementById('results-container');
+const resultCount = document.getElementById('resultCount');
+
+let activeId = SECTIONS[0].id;
+
+SECTIONS.forEach(sec => {
+  const nav = document.createElement('div');
+  nav.className = 'nav-item' + (sec.id === activeId ? ' active' : '');
+  nav.dataset.id = sec.id;
+  nav.innerHTML = `<span class="nav-num">${sec.num}</span><span class="nav-text">${sec.title}</span>`;
+  nav.addEventListener('click', () => { searchInput.value = ''; clearSearch(); setActive(sec.id); });
+  navList.appendChild(nav);
+
+  const div = document.createElement('div');
+  div.className = 'section' + (sec.id === activeId ? ' visible' : '');
+  div.id = 'sec-' + sec.id;
+  div.innerHTML = `
+    <div class="sec-header">
+      <div class="sec-num">${sec.num}</div>
+      <div><div class="sec-title">${sec.title}</div><div class="sec-sub">${sec.sub}</div></div>
+    </div>
+    ${sec.content}`;
+  sectionsContainer.appendChild(div);
+});
+
+function setActive(id) {
+  activeId = id;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.id === id));
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('visible', s.id === 'sec-' + id));
+  searchResults.classList.remove('visible');
+  sectionsContainer.style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearSearch() {
+  searchResults.classList.remove('visible');
+  sectionsContainer.style.display = 'block';
+  resultCount.innerHTML = '';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('hidden'));
+}
+
+function highlight(text, q) {
+  const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  return text.replace(re, '<mark>$1</mark>');
+}
+
+function stripHtml(html) {
+  const d = document.createElement('div'); d.innerHTML = html;
+  return d.textContent || d.innerText || '';
+}
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  if (!q) { clearSearch(); setActive(activeId); return; }
+
+  sectionsContainer.style.display = 'none';
+  searchResults.classList.add('visible');
+
+  const matches = [];
+  SECTIONS.forEach(sec => {
+    const text = stripHtml(sec.content).toLowerCase();
+    if (sec.title.toLowerCase().includes(q) || sec.tags.some(t => t.includes(q)) || text.includes(q)) {
+      const idx = text.indexOf(q);
+      const start = Math.max(0, idx - 60);
+      const end = Math.min(text.length, idx + 120);
+      const snippet = idx >= 0
+        ? (start > 0 ? '...' : '') + text.slice(start, end) + '...'
+        : stripHtml(sec.content).slice(0, 140) + '...';
+      matches.push({ sec, snippet });
+    }
+  });
+
+  document.querySelectorAll('.nav-item').forEach(n =>
+    n.classList.toggle('hidden', !matches.some(m => m.sec.id === n.dataset.id)));
+
+  resultCount.innerHTML = `<span>${matches.length}</span> نتيجة`;
+
+  if (!matches.length) {
+    resultsContainer.innerHTML = `<div class="no-results"><div class="big">🔍</div><div style="font-size:1.1rem;color:var(--text);margin-bottom:.5rem">مفيش نتايج لـ "${q}"</div><div style="font-size:.85rem">جرّب: routing، service، model، interceptor</div></div>`;
+    return;
+  }
+
+  resultsContainer.innerHTML = matches.map(({ sec, snippet }) => `
+    <div class="result-card" onclick="goToSection('${sec.id}')">
+      <div class="result-section">SECTION ${sec.num}</div>
+      <div class="result-title">${highlight(sec.title, q)}</div>
+      <div class="result-snippet">${highlight(snippet, q)}</div>
+    </div>`).join('');
+});
+
+function goToSection(id) { searchInput.value = ''; clearSearch(); setActive(id); }
+
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = '✓ تم'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'نسخ'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== searchInput) { e.preventDefault(); searchInput.focus(); }
+  if (e.key === 'Escape') { searchInput.blur(); searchInput.value = ''; clearSearch(); setActive(activeId); }
+});
+</script>
+</body>
+</html>
